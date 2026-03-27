@@ -11,11 +11,11 @@ struct Student {
 
 impl Student {
     fn update_fees(&mut self, fees: u64) {
-        self.fees = fees;
+        self.fees += fees;
     }
 }
 
-enum AdmitionStatus {
+enum AdmissionStatus {
     FullyAdmitted,
     Conditional,
     Rejected,
@@ -155,10 +155,16 @@ fn view_students(students: &Vec<Student>) {
 
     for (index, student) in students.iter().enumerate() {
         let student_grade: char = get_grade(student.score);
+        let admission_status = match admission_status(student) {
+            AdmissionStatus::Conditional => "Conditional",
+            AdmissionStatus::FullyAdmitted => "Fully Admitted",
+            AdmissionStatus::Rejected => "Rejected",
+        };
+
         println!("Student {}:", index + 1);
         println!(
-            "ID: {} - Name: {} - Age: {} - Score: {} - Grade: {}",
-            student.id, student.name, student.age, student.score, student_grade
+            "ID: {} - Name: {} - Age: {} - Score: {} - Grade: {} - Admission Status: {}",
+            student.id, student.name, student.age, student.score, student_grade, admission_status
         );
         println!("=================================================================\n")
     }
@@ -241,4 +247,16 @@ fn pay_fees(students: &mut Vec<Student>) {
     } else {
         println!("No match found for Student with name: {} ", student_name)
     }
+}
+
+fn admission_status(student: &Student) -> AdmissionStatus {
+    let mut status = AdmissionStatus::Conditional;
+
+    if student.fees >= FEES / 2 {
+        status = AdmissionStatus::FullyAdmitted
+    } else if student.age < 15 {
+        status = AdmissionStatus::Rejected
+    }
+
+    status
 }
