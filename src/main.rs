@@ -6,7 +6,13 @@ struct Student {
     name: String,
     age: u8,
     score: f64,
-    // is_enrolled: bool,
+    fees: u64, // is_enrolled: bool,
+}
+
+impl Student {
+    fn update_fees(&mut self, fees: u64) {
+        self.fees = fees;
+    }
 }
 
 enum AdmitionStatus {
@@ -24,8 +30,9 @@ fn main() {
         match menu().trim() {
             "1" => add_student(&mut students),
             "2" => view_students(&students),
-            "3" => search_student(&students),
-            "4" => {
+            "3" => pay_fees(&mut students),
+            "4" => search_student(&students),
+            "5" => {
                 println!("Thanks for using this system.\nSee you next time.\nBye");
                 break;
             }
@@ -33,6 +40,8 @@ fn main() {
         }
     }
 }
+
+const FEES: u64 = 100_000;
 
 // Menu
 fn menu() -> String {
@@ -42,8 +51,9 @@ fn menu() -> String {
         "
 1. Add Student
 2. View All Students
-3. Search Student by Name
-4. Exit"
+3. Check fee Balance and Pay fees
+4. Search Student by Name
+5. Exit"
     );
 
     let mut choice: String = String::new();
@@ -55,7 +65,7 @@ fn menu() -> String {
 }
 // Get inputs
 fn get_input(prompt: &str) -> String {
-    print!("{}", prompt);
+    print!("{} ", prompt);
     io::stdout().flush().unwrap();
 
     let mut input: String = String::new();
@@ -63,7 +73,7 @@ fn get_input(prompt: &str) -> String {
         .read_line(&mut input)
         .expect("Failed to read input");
 
-    input
+    input.trim().to_string()
 }
 // Add new Students
 fn add_student(students: &mut Vec<Student>) {
@@ -71,6 +81,7 @@ fn add_student(students: &mut Vec<Student>) {
     let mut score: f64 = 0f64;
     let name = get_input("Give Student name: ");
     let name = name.trim().to_string();
+    let fees: u64 = 0;
 
     let last_student_id: u32;
     if students.is_empty() {
@@ -81,7 +92,7 @@ fn add_student(students: &mut Vec<Student>) {
     let id = last_student_id + 1;
     loop {
         // Check age
-        if score > 0f64 && age > 0 {
+        if score > 0f64 && score < 100f64 && age > 0 {
             break;
         }
 
@@ -103,8 +114,8 @@ fn add_student(students: &mut Vec<Student>) {
         }
 
         // Receive Score and check
-        let score = get_input("Give student Score: ");
-        let score = match score.trim().parse::<f64>() {
+        let score_input = get_input("Give student Score: ");
+        score = match score_input.trim().parse::<f64>() {
             Ok(value) => value,
             Err(_) => {
                 println!("Error: Score must be a number");
@@ -122,6 +133,7 @@ fn add_student(students: &mut Vec<Student>) {
             name,
             age,
             score,
+            fees,
         });
         break;
     }
@@ -142,11 +154,91 @@ fn view_students(students: &Vec<Student>) {
     // }
 
     for (index, student) in students.iter().enumerate() {
-        println!("{}: {:#?}", index + 1, student);
+        let student_grade: char = get_grade(student.score);
+        println!("Student {}:", index + 1);
+        println!(
+            "ID: {} - Name: {} - Age: {} - Score: {} - Grade: {}",
+            student.id, student.name, student.age, student.score, student_grade
+        );
+        println!("=================================================================\n")
     }
 }
 
 // Search for Student
 fn search_student(students: &Vec<Student>) {
-    todo!()
+    let student_name = get_input("Give name of the student you are searching for:")
+        .trim()
+        .to_lowercase();
+
+    let searched_students: Vec<&Student> = students
+        .iter()
+        .filter(|st| st.name.to_lowercase().contains(&student_name))
+        .collect();
+
+    // if let Some(student) = students.iter().find(|st| st.name == student_name) {
+    //     println!("Student found: {:#?}", student);
+    // } else {
+    //     println!("Student not found");
+    // }
+
+    if searched_students.is_empty() {
+        println!("No students found matching '{}'", student_name);
+        return;
+    }
+
+    for student in searched_students {
+        println!("Match found: {:#?}", student);
+    }
+}
+
+fn get_grade(score: f64) -> char {
+    let mut grade = 'F';
+    if score > 80f64 {
+        grade = 'A';
+    } else if score >= 70f64 {
+        grade = 'B';
+    } else if score > 60f64 {
+        grade = 'C';
+    } else if score > 40f64 {
+        grade = 'D';
+    }
+    grade
+}
+
+fn pay_fees(students: &mut Vec<Student>) {
+    let student_name = get_input("Give student name to pay fees:");
+
+    if let Some(student) = students
+        .iter_mut()
+        .find(|st| st.name.to_lowercase() == student_name)
+    {
+        println!("\nNote that the total fees for the year is {}frs ", FEES);
+        let owing = FEES - student.fees;
+        println!("You are currently owing {}frs\n", owing);
+        if owing <= 0 {
+            println!("You are not owing any fees and you are fully enrolled");
+            println!("Thanks for trusting us.\n");
+            return;
+        }
+        loop {
+            let updated_fees = get_input("How much do you wish to pay? ");
+            let updated_fees: u64 = match updated_fees.parse() {
+                Ok(value) => value,
+                Err(_) => {
+                    println!("Fees must be a positive number, no 'frs' or text should be added");
+                    continue;
+                }
+            };
+            if updated_fees > owing {
+                println!("Give an amount less than or equal to {}", owing);
+                continue;
+            }
+            student.update_fees(updated_fees);
+
+            println!("You are now owing {}frs", owing - updated_fees);
+            break;
+        }
+    } else {
+        println!("No match found for Student with name: {} ", student_name)
+    }
 }
